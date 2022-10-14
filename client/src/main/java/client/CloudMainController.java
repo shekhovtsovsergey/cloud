@@ -53,20 +53,6 @@ public class CloudMainController implements Initializable {
         needReadMessages = true;
         factory = new DaemonThreadFactory();
         setCurrentDirectory(System.getProperty("user.home"));
-        Path cd = Path.of(currentDirectory);
-
-        //Создаем серверную папку при старте
-        File cdf = new File(cd.toFile() + String.valueOf("/server_files"));
-        if(!cdf.exists()){
-            try {
-                Files.createDirectory(Path.of(currentDirectory + "/server_files"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-
-        //Обновляем список на клиенте
         fillView(clientView, getFiles(currentDirectory));
 
         //Событие на мышку
@@ -125,13 +111,22 @@ public class CloudMainController implements Initializable {
                 CloudMessage message = (CloudMessage) network.getInputStream().readObject();
 
                 if (message instanceof FileMessage fileMessage) {
-                    Files.write(Path.of(currentDirectory+"/server_files").resolve(fileMessage.getFileName()), fileMessage.getBytes());
+
+                    Path cd_to_pathType = Path.of(currentDirectory+"/_TEMP");
+                    File cd_to_filetype = new File(String.valueOf(cd_to_pathType.toFile()));
+                    if(!cd_to_filetype.exists()){
+                        Files.createDirectory(Path.of(String.valueOf(currentDirectory+"/_TEMP")));
+                    }
+
+                    Files.write(Path.of(currentDirectory+"/_TEMP").resolve(fileMessage.getFileName()), fileMessage.getBytes());
                     Platform.runLater(() -> fillView(clientView, getFiles(currentDirectory)));
 
                 } else if (message instanceof FileLastChank fileLastChank) {
                     String path = String.valueOf(Path.of(currentDirectory).resolve(fileLastChank.getFileName()));
-                    List<File> listOfFilesToMerge = fileSplit.listOfFilesToMerge(new File(path+".001"));
+                    String path_temp = String.valueOf(Path.of(currentDirectory+"/_TEMP").resolve(fileLastChank.getFileName()));
+                    List<File> listOfFilesToMerge = fileSplit.listOfFilesToMerge(new File(path_temp+".001"));
                     fileSplit.mergeFiles(listOfFilesToMerge, new File(path));
+                    //удалить темп
                     Platform.runLater(() -> fillView(clientView, getFiles(currentDirectory)));
 
                 } else if (message instanceof ListMessage listMessage) {
