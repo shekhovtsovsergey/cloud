@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="563.0" prefWidth="940.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="client.CloudMainController">
+    <ListView fx:id="clientView" layoutX="29.0" layoutY="147.0" prefHeight="345.0" prefWidth="252.0" />
+    <ListView fx:id="serverView" layoutX="354.0" layoutY="147.0" prefHeight="345.0" prefWidth="252.0" />
+    <Button layoutX="299.0" layoutY="226.0" mnemonicParsing="false" onAction="#sendToServer" prefHeight="36.0" prefWidth="37.0" text="&gt;" />
+    <Button layoutX="299.0" layoutY="301.0" mnemonicParsing="false" onAction="#downloadFile" prefHeight="36.0" prefWidth="37.0" text="&lt;" />
+    <Button layoutX="29.0" layoutY="506.0" mnemonicParsing="false" onAction="#enterToDir" prefHeight="36.0" prefWidth="56.0" text="Enter" />
+    <Button layoutX="99.0" layoutY="505.0" mnemonicParsing="false" onAction="#delete" prefHeight="36.0" prefWidth="56.0" text="Delete" />
+    <Button layoutX="170.0" layoutY="505.0" mnemonicParsing="false" onAction="#rename" prefHeight="36.0" prefWidth="66.0" text="Rename" />
+   <PasswordField fx:id="PasswordField" layoutX="209.0" layoutY="96.0" text="123" />
+   <TextField fx:id="IPField" layoutX="29.0" layoutY="56.0" text="127.0.0.1" />
+   <TextField fx:id="PortField" layoutX="209.0" layoutY="56.0" text="8189" />
+   <TextField fx:id="LoginField" layoutX="29.0" layoutY="96.0" text="sergey" />
+   <Button layoutX="407.0" layoutY="56.0" mnemonicParsing="false" onAction="#connect" prefHeight="25.0" prefWidth="99.0" text="Connect" />
+   <Button layoutX="407.0" layoutY="96.0" mnemonicParsing="false" onAction="#disconnect" prefHeight="25.0" prefWidth="99.0" text="Disconnect" />
+   <MenuBar layoutY="1.0">
+     <menus>
+       <Menu mnemonicParsing="false" text="File">
+         <items>
+           <MenuItem mnemonicParsing="false" text="Close" />
+         </items>
+       </Menu>
+       <Menu mnemonicParsing="false" text="Edit">
+         <items>
+           <MenuItem mnemonicParsing="false" text="Delete" />
+         </items>
+       </Menu>
+       <Menu mnemonicParsing="false" text="Help">
+         <items>
+           <MenuItem mnemonicParsing="false" text="About" />
+         </items>
+       </Menu>
+     </menus>
+   </MenuBar>
+   <ListView fx:id="usersView" layoutX="652.0" layoutY="147.0" prefHeight="345.0" prefWidth="252.0" />
+   <Button fx:id="mail" layoutX="716.0" layoutY="69.0" mnemonicParsing="false"  onAction="#mail" prefHeight="36.0" prefWidth="99.0" text="Mail" visible="false" />
+</AnchorPane>
