@@ -17,10 +17,12 @@ import java.net.Socket;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
+
 
 public class CloudMainController implements Initializable {
     public ListView<String> clientView;
@@ -32,7 +34,6 @@ public class CloudMainController implements Initializable {
     private boolean needReadMessages = true;
 
     private DaemonThreadFactory factory;
-    //private DaemonThreadFactory factory;
     FileSplit fileSplit = new FileSplit();
     @FXML
     TextField LoginField = new TextField("sergey");
@@ -45,66 +46,77 @@ public class CloudMainController implements Initializable {
     @FXML
      Button mail = new Button("Mail");
 
-    public void downloadFile(ActionEvent actionEvent) throws IOException {
-        String login = LoginField.getText();
-        String pass = PasswordField.getText();
-        String fileName = serverView.getSelectionModel().getSelectedItem();
-        network.getOutputStream().writeObject(new FileRequest(fileName,login,pass));
-    }
 
-    public void sendToServer(ActionEvent actionEvent) throws IOException {
-        String fileName = clientView.getSelectionModel().getSelectedItem();
-        String path = String.valueOf(Path.of(currentDirectory).resolve(fileName));
+    //Инициализация
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        needReadMessages = true;
+        factory = new DaemonThreadFactory();
+        setCurrentDirectory(System.getProperty("user.home"));
+        Path cd = Path.of(currentDirectory);
 
-        fileSplit.splitFile(new File(path));
-        List<File> listOfFilesToMerge = fileSplit.listOfFilesToMerge(new File(path+".001"));
-        for (File f : listOfFilesToMerge) {
-            network.getOutputStream().writeObject(new FileMessage(Path.of(String.valueOf(f))));
+        //Создаем серверную папку при старте
+        File cdf = new File(cd.toFile() + String.valueOf("/server_files"));
+        if(!cdf.exists()){
+            try {
+                Files.createDirectory(Path.of(currentDirectory + "/server_files"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        fileSplit.mergeFiles(listOfFilesToMerge, new File(path));
-        network.getOutputStream().writeObject(new FileLastChank(fileName));
-        //fillView(clientView, getFiles(currentDirectory));
+
+
+        //Обновляем список на клиенте
+        fillView(clientView, getFiles(currentDirectory));
+
+        //Событие на мышку
+        clientView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                String selected = clientView.getSelectionModel().getSelectedItem();
+                File selectedFile = new File(currentDirectory + "/" + selected);
+                if (selectedFile.isDirectory()) {
+                    setCurrentDirectory(currentDirectory + "/" + selected);
+                }
+            }
+        });
+        //------------------------------------
+
+        //Событие на мышку
+        serverView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                doubleClickOnServerView();
+            }
+        });
+        //------------------------------------
     }
 
-    public void enterToDir(ActionEvent actionEvent) throws IOException {
-        String login = LoginField.getText();
-        String pass = PasswordField.getText();
-        String fileName = serverView.getSelectionModel().getSelectedItem();
-        network.getOutputStream().writeObject(new EnterDir(fileName,login,pass));
-        System.out.println("actionEvent = " + fileName);
+
+
+
+    private void initNetwork() {
+        try {
+            socket = new Socket(IPField.getText(), Integer.parseInt(PortField.getText()));
+            network = new Network<>(
+                    new ObjectDecoderInputStream(socket.getInputStream()),
+                    new ObjectEncoderOutputStream(socket.getOutputStream())
+            );
+            factory.getThread(this::readMessages, "cloud-client-read-thread")
+                    .start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        mail.setVisible(true);
     }
 
 
 
-
-    public void connect(ActionEvent actionEvent) throws IOException {
-        initNetwork();
-        auth();
-    }
-
+    //Авторизация
     private void auth() throws IOException {
         String login = LoginField.getText();
         String pass = PasswordField.getText();
         network.getOutputStream().writeObject(new FileAuth(login,pass));
     }
 
-
-    public void disconnect(ActionEvent actionEvent) throws IOException {
-    }
-
-    public void delete(ActionEvent actionEvent) throws IOException {
-    }
-
-    public void rename(ActionEvent actionEvent) throws IOException {
-    }
-
-    public void mail(ActionEvent actionEvent) throws IOException {
-        String login = LoginField.getText();
-        String pass = PasswordField.getText();
-        String fileName = login;
-        network.getOutputStream().writeObject(new FileRequest(fileName,login,pass));
-
-    }
 
 
     private void readMessages() {
@@ -135,55 +147,12 @@ public class CloudMainController implements Initializable {
         }
     }
 
-    private void initNetwork() {
-        try {
-            //socket = new Socket("localhost", 8189);
-            socket = new Socket(IPField.getText(), Integer.parseInt(PortField.getText()));
-            network = new Network<>(
-                    new ObjectDecoderInputStream(socket.getInputStream()),
-                    new ObjectEncoderOutputStream(socket.getOutputStream())
-            );
-            factory.getThread(this::readMessages, "cloud-client-read-thread")
-                    .start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        mail.setVisible(true);
-    }
-
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        needReadMessages = true;
-
-        factory = new DaemonThreadFactory();
-        //initNetwork();
-        setCurrentDirectory(System.getProperty("user.home"));
-
-        Path cd = Path.of(currentDirectory);
-        File cdf = new File(cd.toFile() + String.valueOf("/server_files"));
-
-       if(!cdf.exists()){
-            try {
-                //Files.createDirectory(Path.of(cd + "/server_files"));
-                Files.createDirectory(Path.of(currentDirectory + "/server_files"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
 
 
-        fillView(clientView, getFiles(currentDirectory));
-        clientView.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                String selected = clientView.getSelectionModel().getSelectedItem();
-                File selectedFile = new File(currentDirectory + "/" + selected);
-                if (selectedFile.isDirectory()) {
-                    setCurrentDirectory(currentDirectory + "/" + selected);
-                }
-            }
-        });
-    }
 
+    //---------------------------------------------------------------
+    //-----------Вспомогательные методы------------------------------
+    //---------------------------------------------------------------
     private void setCurrentDirectory(String directory) {
         currentDirectory = directory;
         fillView(clientView, getFiles(currentDirectory));
@@ -207,6 +176,72 @@ public class CloudMainController implements Initializable {
             }
         }
         return List.of();
+    }
+
+
+
+
+
+    //---------------------------------------------------------------
+    //-----------Обработка кодов onAction из файла fxml--------------
+    //---------------------------------------------------------------
+
+    public void connect(ActionEvent actionEvent) throws IOException {
+        initNetwork();
+        auth();
+    }
+
+    public void downloadFile(ActionEvent actionEvent) throws IOException {
+        String login = LoginField.getText();
+        String pass = PasswordField.getText();
+        String fileName = serverView.getSelectionModel().getSelectedItem();
+        network.getOutputStream().writeObject(new FileRequest(fileName,login,pass));
+    }
+
+    public void sendToServer(ActionEvent actionEvent) throws IOException {
+        String fileName = clientView.getSelectionModel().getSelectedItem();
+        String path = String.valueOf(Path.of(currentDirectory).resolve(fileName));
+
+        fileSplit.splitFile(new File(path));
+        List<File> listOfFilesToMerge = fileSplit.listOfFilesToMerge(new File(path+".001"));
+        for (File f : listOfFilesToMerge) {
+            network.getOutputStream().writeObject(new FileMessage(Path.of(String.valueOf(f))));
+        }
+        fileSplit.mergeFiles(listOfFilesToMerge, new File(path));
+        network.getOutputStream().writeObject(new FileLastChank(fileName));
+    }
+
+    //Была кнопка для входа в папку на серваке - передалано на двой клик
+    public void enterToDir(ActionEvent actionEvent) throws IOException {
+        String login = LoginField.getText();
+        String pass = PasswordField.getText();
+        String fileName = serverView.getSelectionModel().getSelectedItem();
+        network.getOutputStream().writeObject(new EnterDir(fileName,login,pass));
+    }
+
+    //Двойной клик
+    private void doubleClickOnServerView() {
+        String login = LoginField.getText();
+        String pass = PasswordField.getText();
+        String fileName = serverView.getSelectionModel().getSelectedItem();
+        try {
+            network.getOutputStream().writeObject(new EnterDir(fileName,login,pass));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public void disconnect(ActionEvent actionEvent) throws IOException {
+        //не реализовано
+    }
+
+    public void delete(ActionEvent actionEvent) throws IOException {
+        //не реализовано
+    }
+
+    public void rename(ActionEvent actionEvent) throws IOException {
+        //не реализовано
     }
 
 }
